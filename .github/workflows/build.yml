@@ -15,7 +15,7 @@ jobs:
       - name: Set tag version to env
         run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
       - name: Set download path to env
-        run: echo "DOWNLOAD_PATH=https://github.com/${{ GITHUB_REPOSITORY }}/releases/download/${{ env.RELEASE_VERSION }}/install" >> $GITHUB_ENV
+        run: echo "DOWNLOAD_PATH=https://github.com/${{ env.GITHUB_REPOSITORY }}/releases/download/${{ env.RELEASE_VERSION }}/install" >> $GITHUB_ENV
       - name: Build single file installer
         run: chmod +x build.sh && ./build.sh ${{ env.DOWNLOAD_PATH }}
       - name: Release
