@@ -1,6 +1,11 @@
 command_exists () {
-    type "$1" &> /dev/null
+  if [ -z "$(type "$1" 2> /dev/null)" ]; then
+   return 1
+  fi
+
+  return 0
 }
+
 
 package_allowed() {
     # TODO: Check if is in apt-cache show
