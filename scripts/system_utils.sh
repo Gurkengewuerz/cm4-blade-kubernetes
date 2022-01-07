@@ -1,8 +1,9 @@
 command_exists () {
   if [ -z "$(type "$1" 2> /dev/null)" ]; then
+   echo -e false
    return 1
   fi
-
+  echo -e true
   return 0
 }
 
