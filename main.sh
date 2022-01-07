@@ -159,7 +159,7 @@ main() {
 
       for i in AGENT MASTER; do
         printf "${GREEN} K3s join command for ${BLUE_BOLD}${i}${GREEN}:${PLAIN} "
-        printf "curl -sfL _URL_ | \ \n  CM4_NODE_TYPE=\"${i}\" \ \n  CM4_NODE_TOKEN=\"${TOKEN}\" \ \n  CM4_GLUSTER_FS_VOL=\"${GLUSTER_FS_VOL}\" \ \n  CM4_FLOATING_IP=\"${FLOATING_IP}\" \ \n  bash -\n"
+        printf "CM4_NODE_TYPE=\"${i}\" \ \n  CM4_NODE_TOKEN=\"${TOKEN}\" \ \n  CM4_GLUSTER_FS_VOL=\"${GLUSTER_FS_VOL}\" \ \n  CM4_FLOATING_IP=\"${FLOATING_IP}\" \ \n  bash <(curl -sfL _URL_)\n"
       done
       printf "${PLAIN}\n\n"
     fi
