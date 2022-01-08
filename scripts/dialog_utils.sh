@@ -12,18 +12,15 @@ spinner() {
 
 yesno() {
     while true; do
-        printf "${BLUE}"
-        printf " • $1 "
-
         if [[ $2 == "no" ]]; then
-            printf "${PLAIN}[yes | ${GREEN_BOLD}no${PLAIN}] "
-            read -e ans
+            TXT=$(echo -e ${BLUE}• $1 ${PLAIN}[yes/${GREEN_BOLD}no${PLAIN}])
+            read -p "$TXT " -e -r ans
             if [[ -z "$ans" ]]; then
                 ans="no"
             fi
         else
-            printf "${PLAIN}[${GREEN_BOLD}yes${PLAIN} | no] "
-            read -e ans
+            TXT=$(echo -e ${BLUE}• $1 ${PLAIN}[${GREEN_BOLD}yes${PLAIN}/no])
+            read -p "$TXT " -e -r ans
             if [[ -z "$ans" ]]; then
                 ans="yes"
             fi
@@ -40,11 +37,7 @@ yesno() {
 }
 
 ask() {
-    printf "${PLAIN} • ${BLUE}$2 "
-
-    printf "${PLAIN}[${GREEN_BOLD}$3${PLAIN}] "
-
-    read -e ans
+    read -p "$(echo -e ${PLAIN} • ${BLUE}$2 ${PLAIN}[${GREEN_BOLD}$3${PLAIN}]) " -e -r ans
     if [[ -z "$ans" ]]; then
         ans="$3"
     fi
