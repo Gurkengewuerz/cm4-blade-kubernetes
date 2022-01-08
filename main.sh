@@ -42,13 +42,11 @@ main() {
   log "updating repository"
   apt-get update
 
-  clear
+  clear -x
   
   if [ "$USE_COLORS" == "true" ]; then
     init_colors
   fi
-  
-  clear
   
   printf "${RED_BOLD}#############################################\n"
   printf "${RED_BOLD}###${GREEN_BOLD}            www.mc8051.de              ${RED_BOLD}###\n"
@@ -68,7 +66,7 @@ main() {
   fi
 
   if [ -z "$CM4_NODE_TYPE" ]; then
-    NODE_TYPE="MASTER"
+    CM4_NODE_TYPE="MASTER"
     log "install master node"
   fi
 
@@ -87,6 +85,17 @@ main() {
     log "${BLUE}using glusterfs volume name ${GREEN_BOLD}${GLUSTER_FS_VOL}${PLAIN}"
   fi
   printf "\n"
+
+  if [ -z "$CM4_CUSTOM_REGISTRY" ]; then
+    if yesno "Do you want to setup a custom registry?" "no"; then
+      printf "\n"
+      ask CM4_CUSTOM_REGISTRY "What is the container registry hostname?" "ghcr.io"
+      ask CM4_CUSTOM_REGISTRY_USERNAME "What is the username for the container registry? Leave empty for none." ""
+      ask CM4_CUSTOM_REGISTRY_PASSWORD "What is the password for this user?" ""
+    else
+      CM4_CUSTOM_REGISTRY="none"
+    fi
+  fi
 
   MP="/mnt/${GLUSTER_FS_VOL}"
   BRICK_MP="${MP}/brick1"
@@ -121,7 +130,27 @@ main() {
 
       mkdir -p ${BRICK_MP}
 
-      # TODO: Maybe add custom registry
+      if [[ $CM4_CUSTOM_REGISTRY != "none" ]]; then
+        echo "" > tee /etc/rancher/k3s/registries.yaml
+        tee /etc/rancher/k3s/registries.yaml >/dev/null << EOF
+mirrors:
+  ${CM4_CUSTOM_REGISTRY}:
+    endpoint:
+      - "https://${CM4_CUSTOM_REGISTRY}.de"
+
+EOF
+
+          if [ "$CM4_CUSTOM_REGISTRY_USERNAME" != "" ] || [ "$CM4_CUSTOM_REGISTRY_PASSWORD" != "" ]; then
+            tee -a /etc/rancher/k3s/registries.yaml >/dev/null << EOF
+configs:
+  "${CM4_CUSTOM_REGISTRY}":
+    auth:
+      username: ${CM4_CUSTOM_REGISTRY_USERNAME}
+      password: ${CM4_CUSTOM_REGISTRY_PASSWORD}
+
+EOF
+          fi
+      fi
 
       service k3s restart
 
@@ -147,7 +176,7 @@ main() {
 
   
   # Output Variables
-  clear
+  clear -x
 
   if $ALREADY_INSTALLED; then
     printf "\n\n${GREEN_BOLD} k3s was already installed. Here are your join commands again.\n\n"
@@ -155,7 +184,7 @@ main() {
     printf "\n\n${GREEN_BOLD} Setup finished!\n\n"
   fi
   
-  if [[ $NODE_TYPE == "MASTER" ]]; then
+  if [[ $CM4_NODE_TYPE == "MASTER" ]]; then
     if [ -z "$NODE_TOKEN" ]; then
       TOKEN=$(cat /var/lib/rancher/k3s/server/node-token)
       printf "${GREEN} K3S Cluster Token: ${PLAIN}${TOKEN}\n"
@@ -164,7 +193,18 @@ main() {
 
       for i in AGENT MASTER; do
         printf "${GREEN} K3s join command for ${BLUE_BOLD}${i}${GREEN}:${PLAIN} "
-        printf "CM4_NODE_TYPE=\"${i}\" \ \n  CM4_NODE_TOKEN=\"${TOKEN}\" \ \n  CM4_GLUSTER_FS_VOL=\"${GLUSTER_FS_VOL}\" \ \n  CM4_FLOATING_IP=\"${FLOATING_IP}\" \ \n  bash <(curl -sfL _URL_)\n"
+        printf "CM4_NODE_TYPE=\"${i}\" \ \n  "
+        printf "CM4_NODE_TOKEN=\"${TOKEN}\" \ \n  "
+        printf "CM4_GLUSTER_FS_VOL=\"${GLUSTER_FS_VOL}\" \ \n  "
+        printf "CM4_FLOATING_IP=\"${FLOATING_IP}\" \ \n  "
+        printf "CM4_CUSTOM_REGISTRY=\"${CM4_CUSTOM_REGISTRY}\" \ \n  "
+        if [ "$CM4_CUSTOM_REGISTRY_USERNAME" != "" ]; then
+          printf "CM4_CUSTOM_REGISTRY_USERNAME=\"${CM4_CUSTOM_REGISTRY_USERNAME}\" \ \n  "
+        fi
+        if [ "$CM4_CUSTOM_REGISTRY_PASSWORD" != "" ]; then
+          printf "CM4_CUSTOM_REGISTRY_PASSWORD=\"${CM4_CUSTOM_REGISTRY_PASSWORD}\" \ \n  "
+        fi
+        printf "bash <(curl -sfL _URL_)\n"
       done
       printf "${PLAIN}\n\n"
     fi
