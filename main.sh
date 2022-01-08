@@ -128,6 +128,8 @@ main() {
       kubectl taint nodes ${HOSTNAME} node-role.kubernetes.io/master="":NoSchedule
 
       echo -e "alias k='kubectl'\n" > /etc/profile.d/69-kubernetes.sh
+      echo -e "source <(kubectl completion bash)\n" >> /etc/profile.d/69-kubernetes.sh
+      echo -e "complete -o default -F __start_kubectl k\n" >> /etc/profile.d/69-kubernetes.sh
     else
       system_verify "glusterfs-client"
 
