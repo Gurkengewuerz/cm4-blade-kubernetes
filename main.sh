@@ -130,9 +130,25 @@ main() {
 
       mkdir -p ${BRICK_MP}
 
-      if [[ $CM4_CUSTOM_REGISTRY != "none" ]]; then
-        echo "" > tee /etc/rancher/k3s/registries.yaml
-        tee /etc/rancher/k3s/registries.yaml >/dev/null << EOF
+      kubectl taint nodes ${HOSTNAME} node-role.kubernetes.io/master="":NoSchedule
+
+      echo -e "alias k='kubectl'\n" > /etc/profile.d/69-kubernetes.sh
+      echo -e "source <(kubectl completion bash)\n" >> /etc/profile.d/69-kubernetes.sh
+      echo -e "complete -o default -F __start_kubectl k\n" >> /etc/profile.d/69-kubernetes.sh
+    else
+      system_verify "glusterfs-client"
+
+      log "install as extra agent"
+      curl -sfL https://get.k3s.io | K3S_URL=https://${FLOATING_IP}:6443 K3S_TOKEN=${CM4_NODE_TOKEN} sh -
+
+      log "enabling glusterfs in fstab"
+      echo -e "${FLOATING_IP}:/${GLUSTER_FS_VOL} ${MP} glusterfs defaults,_netdev       0  0\n" >> /etc/fstab
+    fi
+
+    if [[ $CM4_CUSTOM_REGISTRY != "none" ]]; then
+      mkdir -p /etc/rancher/k3s
+      echo "" > tee /etc/rancher/k3s/registries.yaml
+      tee /etc/rancher/k3s/registries.yaml >/dev/null << EOF
 mirrors:
   ${CM4_CUSTOM_REGISTRY}:
     endpoint:
@@ -152,24 +168,14 @@ EOF
           fi
       fi
 
-      service k3s restart
-
-      kubectl taint nodes ${HOSTNAME} node-role.kubernetes.io/master="":NoSchedule
-
-      echo -e "alias k='kubectl'\n" > /etc/profile.d/69-kubernetes.sh
-      echo -e "source <(kubectl completion bash)\n" >> /etc/profile.d/69-kubernetes.sh
-      echo -e "complete -o default -F __start_kubectl k\n" >> /etc/profile.d/69-kubernetes.sh
-    else
-      system_verify "glusterfs-client"
-
-      log "install as extra agent"
-      curl -sfL https://get.k3s.io | K3S_URL=https://${FLOATING_IP}:6443 K3S_TOKEN=${CM4_NODE_TOKEN} sh -
-
-      log "enabling glusterfs in fstab"
-      echo -e "${FLOATING_IP}:/${GLUSTER_FS_VOL} ${MP} glusterfs defaults,_netdev       0  0\n" >> /etc/fstab
-    fi
-
-    systemctl enable --now glusterd
+      log "restarting k3s service to apply custom configs"
+      if [[ $CM4_NODE_TYPE == "MASTER" ]]; then
+        service k3s restart
+        log "enable glusterfs service"
+        systemctl enable --now glusterd
+      else
+        service k3s-agent restart
+      fi
   fi
 
   printf "${PLAIN}"
